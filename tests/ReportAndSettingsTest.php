@@ -1,0 +1,137 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Services\AioAudit;
+
+use Osmium\Services\AioAudit\Models\AuditSettings;
+use Osmium\Services\AioAudit\Models\Checks;
+use Osmium\Services\AioAudit\Models\ReportExport;
+use Osmium\Services\AioAudit\Models\RunDiff;
+use Osmium\Services\AioAudit\Models\Scoring;
+use Osmium\Services\AioAudit\Models\AioAuditHooks;
+use Osmium\Services\AioAudit\Models\AioAuditReport;
+use PHPUnit\Framework\TestCase;
+
+require_once __DIR__ . '/../models/Checks.php';
+require_once __DIR__ . '/../models/Scoring.php';
+require_once __DIR__ . '/../models/PageParser.php';
+require_once __DIR__ . '/../models/RunDiff.php';
+require_once __DIR__ . '/../models/AioAuditReport.php';
+require_once __DIR__ . '/../models/ReportExport.php';
+require_once __DIR__ . '/../models/AuditSettings.php';
+require_once __DIR__ . '/../models/Crawler.php';
+require_once __DIR__ . '/../models/AioAuditHooks.php';
+
+class ReportAndSettingsTest extends TestCase
+{
+    private string $settingsPath;
+
+    protected function setUp(): void
+    {
+        $this->settingsPath = \sys_get_temp_dir() . '/aio-audit-settings-' . \uniqid() . '.json.php';
+    }
+
+    protected function tearDown(): void
+    {
+        if (\file_exists($this->settingsPath)) \unlink($this->settingsPath);
+    }
+
+    public function test_fix_rows_are_ordered_by_severity_then_pages_and_ids_unpack(): void
+    {
+        $findings = [
+            ['check_key' => 'jsonld_missing', 'severity' => 'low', 'page_url' => '/a/', 'detail' => null],
+            ['check_key' => 'jsonld_invalid', 'severity' => 'medium', 'page_url' => '/a/', 'detail' => null],
+            ['check_key' => 'jsonld_invalid', 'severity' => 'medium', 'page_url' => '/b/', 'detail' => null],
+            ['check_key' => 'page_error', 'severity' => 'critical', 'page_url' => '/c/', 'detail' => null],
+        ];
+
+        $rows = AioAuditReport::fixRows(7, $findings);
+
+        $this->assertSame(['Critical', 'Medium', 'Low'], \array_column($rows, 'severityLabel'));
+        $this->assertSame(2, $rows[1]['pages']);
+        $this->assertSame(['runId' => 7, 'checkKey' => 'jsonld_invalid'], AioAuditReport::unpackId($rows[1]['id']));
+        $this->assertNull(AioAuditReport::unpackId(5));
+        $this->assertNull(AioAuditReport::unpackId(700 + \count(Checks::CATALOGUE)));
+    }
+
+    public function test_severity_counts(): void
+    {
+        $counts = AioAuditReport::severityCounts([['severity' => 'medium', 'check_key' => 'x'], ['severity' => 'medium', 'check_key' => 'y'], ['severity' => 'low', 'check_key' => 'z']]);
+
+        $this->assertSame(['critical' => 0, 'high' => 0, 'medium' => 2, 'low' => 1], $counts);
+    }
+
+    public function test_run_diff_counts_new_fixed_and_unchanged(): void
+    {
+        $diff = RunDiff::compare(['a|/x' => true, 'b|/y' => true], ['b|/y' => true, 'c|/z' => true]);
+
+        $this->assertSame(['new' => 1, 'fixed' => 1, 'unchanged' => 1], $diff);
+    }
+
+    public function test_settings_round_trip_and_clamp(): void
+    {
+        $saved = AuditSettings::save(['pageCap' => 99999, 'delayMs' => -5, 'baseUrl' => 'http://localhost/'], $this->settingsPath);
+
+        $this->assertSame(2000, $saved['pageCap']);
+        $this->assertSame(500, $saved['delayMs']);
+        $this->assertSame('http://localhost', $saved['baseUrl']);
+        $this->assertSame(500, AuditSettings::get($this->settingsPath)['delayMs']);
+        $this->assertStringStartsWith('<?php exit(); ?>', (string) \file_get_contents($this->settingsPath));
+    }
+
+    public function test_a_crawl_address_with_a_path_or_bad_scheme_is_refused(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        AuditSettings::save(['baseUrl' => 'ftp://example.com/x'], $this->settingsPath);
+    }
+
+    public function test_missing_settings_file_gives_defaults(): void
+    {
+        $this->assertSame(AuditSettings::defaults(), AuditSettings::get($this->settingsPath));
+    }
+
+    public function test_the_hook_ignores_requests_without_a_token_or_a_data_source(): void
+    {
+        $this->assertNull(AioAuditHooks::requestInternal(['headers' => []]));
+        $this->assertNull(AioAuditHooks::requestInternal(['headers' => ['X-Osmium-AIO-Audit' => \str_repeat('a', 32)]]));
+    }
+
+    public function test_rating_is_red_amber_or_green_from_severity_then_score(): void
+    {
+        $this->assertSame('green', Scoring::rating(98, 0, 0));
+        $this->assertSame('amber', Scoring::rating(98, 0, 1));
+        $this->assertSame('amber', Scoring::rating(89, 0, 0));
+        $this->assertSame('red', Scoring::rating(98, 1, 0));
+        $this->assertSame('red', Scoring::rating(69, 0, 0));
+        $this->assertNull(Scoring::rating(null, 0, 0));
+        $this->assertSame(['label' => 'Green', 'class' => 'success'], AioAuditReport::ratingBadge(95, 0, 0));
+    }
+
+    public function test_the_markdown_report_lists_fixes_by_priority_with_their_pages(): void
+    {
+        $run = ['id' => 4, 'started_at' => '2026-10-31 10:00:00', 'pages_checked' => 12, 'score' => 71];
+        $findings = [
+            ['check_key' => 'page_error', 'severity' => 'critical', 'page_url' => '/gone', 'detail' => 'Status 404'],
+            ['check_key' => 'jsonld_invalid', 'severity' => 'medium', 'page_url' => '/a', 'detail' => null],
+            ['check_key' => 'jsonld_invalid', 'severity' => 'medium', 'page_url' => '/b', 'detail' => null],
+        ];
+
+        $markdown = ReportExport::markdown($run, $findings, 'https://example.com');
+
+        $this->assertStringContainsString('# AI visibility audit: https://example.com', $markdown);
+        $this->assertStringContainsString('12 pages checked. Site score: 71/100 (red).', $markdown);
+        $this->assertStringContainsString('| Critical | 1 |', $markdown);
+        $this->assertStringContainsString('- `/gone` - Status 404', $markdown);
+        $this->assertStringContainsString('### Broken structured data (2)', $markdown);
+        $this->assertLessThan(\strpos($markdown, '## Medium'), \strpos($markdown, '## Critical'));
+    }
+
+    public function test_an_audit_with_no_findings_says_so(): void
+    {
+        $markdown = ReportExport::markdown(['id' => 1, 'started_at' => '2026-10-31 10:00:00', 'pages_checked' => 3, 'score' => 100], [], 'https://example.com');
+
+        $this->assertStringContainsString('Nothing to fix.', $markdown);
+    }
+}

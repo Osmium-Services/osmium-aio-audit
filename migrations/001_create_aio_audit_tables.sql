@@ -1,0 +1,44 @@
+CREATE TABLE IF NOT EXISTS {PREFIX}aio_audit_runs (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    status VARCHAR(10) NOT NULL DEFAULT 'running',
+    token CHAR(32) NULL DEFAULT NULL,
+    base_url VARCHAR(255) NOT NULL,
+    page_cap INT UNSIGNED NOT NULL DEFAULT 100,
+    pages_checked INT UNSIGNED NOT NULL DEFAULT 0,
+    score TINYINT UNSIGNED NULL DEFAULT NULL,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finished_at TIMESTAMP NULL DEFAULT NULL,
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS {PREFIX}aio_audit_pages (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    run_id INT UNSIGNED NOT NULL,
+    url VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    source VARCHAR(10) NOT NULL DEFAULT 'site',
+    in_sitemap TINYINT(1) NOT NULL DEFAULT 0,
+    fetched TINYINT(1) NOT NULL DEFAULT 0,
+    status_code SMALLINT UNSIGNED NULL DEFAULT NULL,
+    redirect_target VARCHAR(500) NULL DEFAULT NULL,
+    fetch_error VARCHAR(255) NULL DEFAULT NULL,
+    robots VARCHAR(255) NULL DEFAULT NULL,
+    jsonld_blocks SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    jsonld_invalid SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    jsonld_types TEXT NULL,
+    response_ms INT UNSIGNED NULL DEFAULT NULL,
+    bytes INT UNSIGNED NULL DEFAULT NULL,
+    links MEDIUMTEXT NULL,
+    UNIQUE KEY unique_run_url (run_id, url),
+    KEY idx_run_fetched (run_id, fetched)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS {PREFIX}aio_audit_findings (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    run_id INT UNSIGNED NOT NULL,
+    check_key VARCHAR(40) NOT NULL,
+    severity VARCHAR(10) NOT NULL,
+    page_url VARCHAR(255) NULL DEFAULT NULL,
+    detail VARCHAR(500) NULL DEFAULT NULL,
+    KEY idx_run_severity (run_id, severity),
+    KEY idx_run_check (run_id, check_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

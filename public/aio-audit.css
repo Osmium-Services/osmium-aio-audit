@@ -1,0 +1,4 @@
+.aio-score-card.aio-score-red { background: #7f1d1d; color: #fecaca; }
+.aio-score-card.aio-score-amber { background: #78350f; color: #fde68a; }
+.aio-score-card.aio-score-green { background: #14532d; color: #bbf7d0; }
+.aio-score-card h2, .aio-score-card small { color: inherit !important; }

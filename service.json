@@ -1,0 +1,75 @@
+{
+    "id": "osmium-aio-audit",
+    "name": "Osmium AIO Audit",
+    "version": "0.2.0",
+    "description": "Audits on demand how well AI answer engines can find and cite the site (blocked AI crawlers, missing organisation and structured data) and lists the fixes in priority order, with a score you can track between runs",
+    "category": "marketing-analytics",
+    "author": {
+        "name": "Gavin Cox"
+    },
+    "license": "proprietary",
+    "requires": {
+        "osmium": ">=1.0.0",
+        "php": ">=8.1"
+    },
+    "autoload": [
+        "models"
+    ],
+    "migrations": "migrations/",
+    "hooks": {
+        "request.internal": [
+            "Osmium\\Services\\AioAudit\\Models\\AioAuditHooks::requestInternal"
+        ],
+        "mcp.tools": [
+            "Osmium\\Services\\AioAudit\\Models\\AioAuditMcp::tools"
+        ]
+    },
+    "admin": {
+        "menu": {
+            "items": [
+                {
+                    "id": "aio-audit",
+                    "label": "AIO Audit",
+                    "icon": "bx bx-bot",
+                    "color": "#6f42c1",
+                    "route": "admin/aio-audit",
+                    "activePattern": "admin/aio-audit*",
+                    "role": null
+                }
+            ]
+        },
+        "routes": {
+            "admin/aio-audit": {
+                "controller": "controllers/AioAuditController.php",
+                "class": "Osmium\\Services\\AioAudit\\Controllers\\AioAuditController",
+                "method": "index",
+                "title": "AIO Audit"
+            },
+            "admin/aio-audit/action": {
+                "controller": "controllers/AioAuditController.php",
+                "class": "Osmium\\Services\\AioAudit\\Controllers\\AioAuditController",
+                "method": "action"
+            },
+            "admin/aio-audit/runs": {
+                "controller": "controllers/AioAuditController.php",
+                "class": "Osmium\\Services\\AioAudit\\Controllers\\AioAuditController",
+                "method": "runs",
+                "title": "AIO Audit Runs"
+            },
+            "admin/aio-audit/download": {
+                "controller": "controllers/AioAuditController.php",
+                "class": "Osmium\\Services\\AioAudit\\Controllers\\AioAuditController",
+                "method": "download"
+            },
+            "admin/aio-audit/settings": {
+                "controller": "controllers/AioAuditController.php",
+                "class": "Osmium\\Services\\AioAudit\\Controllers\\AioAuditController",
+                "method": "settings",
+                "title": "AIO Audit Settings"
+            }
+        }
+    },
+    "setup": {
+        "postInstallNote": "Open Service Settings > AIO Audit and press Run audit. It fetches the site's own pages (from this server, marked so they never count in visitor stats or the redirect log), checks how well AI answer engines can find and cite them and lists the fixes from Critical down to Low. Download report on a finished audit saves it as a Markdown file you can hand to an assistant. Past runs and what changed since the last one are under Runs; page limit, delay and crawl address are under Settings. It audits on demand only."
+    }
+}
