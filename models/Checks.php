@@ -148,6 +148,42 @@ class Checks
         return $blocked;
     }
 
+    /** @return string[] the AI crawlers a bot check covers, e.g. the search bots for ai_search_bot_blocked */
+    public static function botsFor(string $checkKey): array
+    {
+        $bots = [];
+        foreach (self::AI_BOTS as $bot => $purpose) {
+            if (self::BOT_PURPOSES[$purpose]['check'] === $checkKey) $bots[] = $bot;
+        }
+
+        return $bots;
+    }
+
+    /**
+     * What a run was able to test, kept with the run so its report can say what passed, failed or could not run.
+     *
+     * @param array<int, array<string, mixed>> $pages every crawled page, as for run()
+     * @param array{isLive?: bool, robotsRead?: bool} $context
+     * @return array{live: bool, robots: bool, sitemapPages: int, htmlPages: int, home: bool}
+     */
+    public static function coverage(array $pages, array $context = []): array
+    {
+        $sitemapPages = 0;
+        $htmlPages = 0;
+        $home = false;
+        foreach ($pages as $page) {
+            $isOk = (int) ($page['status_code'] ?? 0) === 200;
+            $isHtml = $isOk && ($page['jsonld_types'] ?? null) !== null;
+            $isIndexable = $isHtml && !PageParser::isNoindex((string) ($page['robots'] ?? ''));
+            if (!empty($page['in_sitemap'])) $sitemapPages++;
+            if ($isIndexable) $htmlPages++;
+            if ($isOk && $page['url'] === '/') $home = true;
+        }
+        $live = (bool) ($context['isLive'] ?? false);
+
+        return ['live' => $live, 'robots' => $live && (bool) ($context['robotsRead'] ?? false), 'sitemapPages' => $sitemapPages, 'htmlPages' => $htmlPages, 'home' => $home];
+    }
+
     private static function finding(string $key, ?string $url, ?string $detail = null): array
     {
         return ['check_key' => $key, 'severity' => self::CATALOGUE[$key]['severity'], 'page_url' => $url, 'detail' => $detail];

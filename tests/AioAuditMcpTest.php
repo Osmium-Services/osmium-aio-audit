@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tests\Services\AioAudit;
 
 use Osmium\Services\AioAudit\Models\AioAuditMcp;
+use Osmium\Services\AioAudit\Models\Checks;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/../models/Checks.php';
 require_once __DIR__ . '/../models/Scoring.php';
 require_once __DIR__ . '/../models/RunDiff.php';
 require_once __DIR__ . '/../models/AioAuditReport.php';
+require_once __DIR__ . '/../models/CheckSummary.php';
 require_once __DIR__ . '/../models/AioAuditMcp.php';
 
 /** The audit tool the /mcp endpoint offers: a score, counts and capped, masked fixes. Read only, no addresses. */
@@ -50,6 +52,31 @@ final class AioAuditMcpTest extends TestCase
         $this->assertSame('critical', $result['fixes'][0]['priority']);
         $this->assertSame(2, $result['fixes'][1]['affected']);
         $this->assertNotSame('', $result['fixes'][0]['how_to_fix']);
+    }
+
+    public function test_every_check_is_listed_with_a_status_and_detail(): void
+    {
+        $coverage = \json_encode(['live' => false, 'robots' => false, 'sitemapPages' => 40, 'htmlPages' => 38, 'home' => true]);
+
+        $result = AioAuditMcp::shape($this->run_() + ['coverage' => $coverage], [$this->finding('jsonld_invalid', 'medium', '/a/')], null);
+
+        $this->assertSame(\array_keys(Checks::CATALOGUE), \array_column($result['checks'], 'check_key'));
+        $byKey = \array_column($result['checks'], null, 'check_key');
+        $this->assertSame(['check_key', 'label', 'status', 'detail'], \array_keys($byKey['page_error']));
+        $this->assertSame('pass', $byKey['page_error']['status']);
+        $this->assertSame('40 sitemap pages tested', $byKey['page_error']['detail']);
+        $this->assertSame('fail', $byKey['jsonld_invalid']['status']);
+        $this->assertSame('skipped', $byKey['ai_search_bot_blocked']['status']);
+        $this->assertSame('Skipped: runs on live only', $byKey['ai_search_bot_blocked']['detail']);
+        $this->assertArrayHasKey('fixes', $result);
+        $this->assertArrayHasKey('audit', $result);
+    }
+
+    public function test_a_run_without_coverage_reports_unknown_not_a_guess(): void
+    {
+        $byKey = \array_column(AioAuditMcp::shape($this->run_(), [], null)['checks'], null, 'check_key');
+
+        $this->assertSame('unknown', $byKey['page_error']['status']);
     }
 
     public function test_pages_are_capped_per_fix_and_the_rest_counted(): void

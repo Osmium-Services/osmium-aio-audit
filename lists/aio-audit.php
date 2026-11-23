@@ -3,14 +3,32 @@
 declare(strict_types=1);
 
 /**
- * AIO Audit lists, rendered by Osmium\Modules\Admin\Core\ListView. 'fixes' has one row per check that fired, most
+ * AIO Audit lists ('checks' is the what-was-checked summary, built by CheckSummary), rendered by Osmium\Modules\Admin\Core\ListView. 'fixes' has one row per check that fired, most
  * serious first, and expands (get_items) to the pages it affects. 'runs' is the history; each row opens its report.
  * Rows are prepared by AioAuditReport.
  */
 $severityBadge = fn(array $row, array $context): string => '<span class="badge bg-label-' . \htmlspecialchars((string) $row['severityClass']) . '">'
     . \htmlspecialchars((string) $row['severityLabel']) . '</span>';
 
+$statusCell = fn(array $row, array $context): string => '<span class="' . \htmlspecialchars((string) $row['statusClass']) . '"><i class="bx ' . \htmlspecialchars((string) $row['statusIcon']) . ' me-1"></i>'
+    . \htmlspecialchars((string) $row['statusLabel']) . '</span>';
+
 return [
+    'checks' => [
+        'id' => 'aio-checks',
+        'title' => 'What Was Checked',
+        'icon' => 'bx-check-shield',
+        'iconClass' => 'text-primary',
+        'noun' => ['check', 'checks'],
+        'emptyText' => 'No checks',
+        'columns' => [
+            ['key' => 'statusLabel', 'label' => 'Result', 'type' => 'html', 'nowrap' => true, 'sortKey' => 'statusRank', 'render' => $statusCell],
+            ['key' => 'label', 'label' => 'Check', 'type' => 'text', 'strong' => true, 'fill' => true, 'sub' => ['key' => 'group', 'style' => 'muted']],
+            ['key' => 'detail', 'label' => 'Detail', 'type' => 'text', 'fill' => true, 'small' => true],
+        ],
+        'actions' => [],
+    ],
+
     'fixes' => [
         'id' => 'aio-fixes',
         'title' => 'Priority Fixes',

@@ -8,6 +8,7 @@ use Osmium\Modules\Admin\Core\AdminController;
 use Osmium\Services\AioAudit\Models\AuditRunner;
 use Osmium\Services\AioAudit\Models\AuditSettings;
 use Osmium\Services\AioAudit\Models\AuditStore;
+use Osmium\Services\AioAudit\Models\CheckSummary;
 use Osmium\Services\AioAudit\Models\Crawler;
 use Osmium\Services\AioAudit\Models\ReportExport;
 use Osmium\Services\AioAudit\Models\RunDiff;
@@ -44,6 +45,7 @@ class AioAuditController extends AdminController
         $this->data['admin']['rating'] = $run === null ? null : AioAuditReport::ratingBadge(
             $run['score'] === null ? null : (int) $run['score'], $this->data['admin']['counts']['critical'], $this->data['admin']['counts']['high'],
         );
+        $this->data['admin']['checks'] = $run === null ? [] : CheckSummary::rows($findings, CheckSummary::decode($run['coverage'] ?? null));
         $this->data['admin']['fixes'] = $run === null ? [] : AioAuditReport::fixRows((int) $run['id'], $findings);
         $this->data['admin']['startedLabel'] = $run === null ? '' : \date('d M Y H:i', (int) \strtotime((string) $run['started_at']));
         $this->data['admin']['crawlBase'] = $this->settingsRunner()->crawlBase();

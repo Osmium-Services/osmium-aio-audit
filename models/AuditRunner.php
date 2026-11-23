@@ -185,26 +185,23 @@ class AuditRunner
     private function finish(int $runId, string $token): int
     {
         $pages = $this->store->pages($runId);
-        $context = [
-            'baseUrl' => $this->siteUrl,
-            'isLive' => $this->isLive,
-            'robotsTxt' => $this->isLive ? $this->robotsTxt($token) : '',
-        ];
+        $robotsTxt = $this->isLive ? $this->robotsTxt($token) : null;
+        $context = ['baseUrl' => $this->siteUrl, 'isLive' => $this->isLive, 'robotsTxt' => (string) $robotsTxt, 'robotsRead' => $robotsTxt !== null];
 
         $findings = Checks::run($pages, $context);
         $score = Scoring::score($findings, \count($pages));
         $this->store->addFindings($runId, $findings);
-        $this->store->finishRun(id: $runId, status: 'done', pages: \count($pages), score: $score);
+        $this->store->finishRun(id: $runId, status: 'done', pages: \count($pages), score: $score, coverage: Checks::coverage($pages, $context));
 
         return $score;
     }
 
-    /** The live site's robots.txt, or an empty string when it does not return 200 (nothing is blocked then) */
-    private function robotsTxt(string $token): string
+    /** The live site's robots.txt, or null when it does not return 200 (nothing is blocked then, and the bot checks are skipped) */
+    private function robotsTxt(string $token): ?string
     {
         $robots = $this->crawler->fetch($this->crawlBase() . '/robots.txt', $token);
 
-        return $robots['status'] === 200 ? $robots['body'] : '';
+        return $robots['status'] === 200 ? $robots['body'] : null;
     }
 
     private function siteHost(): string

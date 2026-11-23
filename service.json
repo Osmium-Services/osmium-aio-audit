@@ -1,7 +1,7 @@
 {
     "id": "osmium-aio-audit",
     "name": "Osmium AIO Audit",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Audits on demand how well AI answer engines can find and cite the site (blocked AI crawlers, missing organisation and structured data) and lists the fixes in priority order, with a score you can track between runs",
     "category": "marketing-analytics",
     "author": {
