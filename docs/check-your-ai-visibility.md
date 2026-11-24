@@ -1,6 +1,7 @@
 ---
 title: Check how AI assistants see your site
 tags: ai, aio, audit, answer engines, chatgpt, crawlers, structured data, score
+page: admin/aio-audit, admin/aio-audit/runs, admin/aio-audit/settings
 ---
 
 **AIO Audit** checks how well AI answer engines can find and cite your site. It looks for things like blocked AI crawlers and missing organisation and structured data, and lists the fixes in priority order.
