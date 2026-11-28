@@ -1,7 +1,7 @@
 {
     "id": "osmium-aio-audit",
     "name": "Osmium AIO Audit",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "description": "Audits on demand how well AI answer engines can find and cite the site (blocked AI crawlers, missing organisation and structured data) and lists the fixes in priority order, with a score you can track between runs",
     "category": "marketing-analytics",
     "author": {
@@ -70,6 +70,6 @@
         }
     },
     "setup": {
-        "postInstallNote": "Open Service Settings > AIO Audit and press Run audit. It fetches the site's own pages (from this server, marked so they never count in visitor stats or the redirect log), checks how well AI answer engines can find and cite them and lists the fixes from Critical down to Low. Download report on a finished audit saves it as a Markdown file you can hand to an assistant. Past runs and what changed since the last one are under Runs; page limit, delay and crawl address are under Settings. It audits on demand only."
+        "postInstallNote": "Open Services > AIO Audit and press Run audit. It fetches the site's own pages (from this server, marked so they never count in visitor stats or the redirect log), checks how well AI answer engines can find and cite them and lists the fixes from Critical down to Low. Download report on a finished audit saves it as a Markdown file you can hand to an assistant. Past runs and what changed since the last one are under Runs; page limit, delay and crawl address are under Settings. It audits on demand only."
     }
 }

@@ -2,7 +2,7 @@
 
 Audits on demand how well AI answer engines (ChatGPT, Claude, Perplexity, Google's AI features) can find and cite the site, and lists the fixes from Critical down to Low, with a 0-100 score to track between runs.
 
-Admin: Service Settings > AIO Audit (report, with Download report: the run as a Markdown file to hand to an assistant), Runs (history and what changed), Settings (page limit, delay, crawl address). Read-only MCP tool: `aio_audit_latest`.
+Admin: Services > AIO Audit (report, with Download report: the run as a Markdown file to hand to an assistant), Runs (history and what changed), Settings (page limit, delay, crawl address). Read-only MCP tool: `aio_audit_latest`.
 
 ## Checks
 
